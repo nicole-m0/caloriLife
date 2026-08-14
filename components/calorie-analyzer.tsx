@@ -5,7 +5,7 @@ import { Loader2, RotateCcw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { UploadZone } from '@/components/upload-zone'
 import { NutritionResult } from '@/components/nutrition-result'
-import { analyzeFood, type AnalysisResult } from '@/lib/mock-analysis'
+import type { AnalysisResult } from '@/lib/openai-analysis'
 
 type Status = 'idle' | 'analyzing' | 'done'
 
@@ -28,11 +28,25 @@ export function CalorieAnalyzer() {
     setStatus('analyzing')
 
     try {
-      const analysis = await analyzeFood(file)
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/analyze-food', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao analisar imagem')
+      }
+
+      const analysis = await response.json()
       setResult(analysis)
       setStatus('done')
     } catch (error) {
-      console.log('[v0] Erro ao analisar a imagem:', error)
+      console.error('[CalorieAnalyzer] Erro ao analisar a imagem:', error)
+      alert(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
       setStatus('idle')
     }
   }, [])
